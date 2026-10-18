@@ -34,6 +34,8 @@ MARGEM_ROI_ROSTO = 0.25
 
 SUAVIZACAO_QUADRADO = 0.3
 
+COR_TEXTO = (255, 255, 255)
+
 POSICOES_TIMER = {
     "ear": (10, 60),
     "mar": (10, 85),
@@ -237,7 +239,7 @@ while True:
             mar_calibracao.append(mar)
             cv2.putText(frame, "Calibrando... {}/{}".format(
                 len(ear_calibracao), FRAMES_CALIBRACAO), (10, 90),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, COR_TEXTO, 2)
             if len(ear_calibracao) >= FRAMES_CALIBRACAO:
                 ear_base = statistics.median(ear_calibracao)
                 mar_base = statistics.median(mar_calibracao)
@@ -273,10 +275,9 @@ while True:
 
                 tempo_decorrido = time.time() - st["tempo_evento"]
 
-                cor_timer = (0, 0, 255) if tempo_decorrido >= TEMPO_PARA_ALERTA else (0, 165, 255)
                 cv2.putText(frame, "{}: {:.1f}/{:.1f}s".format(
                     tecnica.upper(), tempo_decorrido, TEMPO_PARA_ALERTA),
-                    POSICOES_TIMER[tecnica], cv2.FONT_HERSHEY_SIMPLEX, 0.55, cor_timer, 2)
+                    POSICOES_TIMER[tecnica], cv2.FONT_HERSHEY_SIMPLEX, 0.55, COR_TEXTO, 2)
 
                 if tempo_decorrido >= TEMPO_PARA_ALERTA:
                     if not st["alarme_on"]:
@@ -289,12 +290,12 @@ while True:
 
         if tecnicas_em_alerta:
             cv2.putText(frame, "SONOLENCIA! ({})".format(", ".join(tecnicas_em_alerta)), (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, COR_TEXTO, 2)
 
         cv2.putText(frame, "EAR: {:.2f}".format(ear), (300, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, COR_TEXTO, 2)
         cv2.putText(frame, "MAR: {:.2f}".format(mar), (300, 55),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, COR_TEXTO, 2)
 
     if tocar_som:
         Thread(target=tocar_alarme, daemon=True).start()
