@@ -6,6 +6,8 @@ import time
 import dlib
 import cv2
 import os
+import ctypes
+import ctypes.util
 import platform
 import subprocess
 import sys
@@ -34,7 +36,13 @@ MARGEM_ROI_ROSTO = 0.25
 
 SUAVIZACAO_QUADRADO = 0.3
 
-COR_TEXTO = (255, 255, 255)
+COR_TEXTO = (0, 0, 255)
+
+TEXTO_ALERTA = "SONOLENCIA"
+ESCALA_ALERTA = 1.6
+ESPESSURA_ALERTA = 4
+
+NOME_JANELA = "Detector de Sonolencia"
 
 POSICOES_TIMER = {
     "ear": (10, 60),
@@ -116,6 +124,65 @@ def calcular_mar(boca):
     return (A + B) / (2.0 * C)
 
 
+def obter_tamanho_tela():
+    sistema = platform.system()
+    try:
+        if sistema == "Darwin":
+            class CGRect(ctypes.Structure):
+                _fields_ = [("x", ctypes.c_double), ("y", ctypes.c_double),
+                            ("largura", ctypes.c_double), ("altura", ctypes.c_double)]
+
+            cg = ctypes.CDLL(ctypes.util.find_library("CoreGraphics"))
+            cg.CGMainDisplayID.restype = ctypes.c_uint32
+            cg.CGDisplayBounds.restype = CGRect
+            cg.CGDisplayBounds.argtypes = [ctypes.c_uint32]
+            tela = cg.CGDisplayBounds(cg.CGMainDisplayID())
+            return int(tela.largura), int(tela.altura)
+        elif sistema == "Windows":
+            user32 = ctypes.windll.user32
+            user32.SetProcessDPIAware()
+            return user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+        else:
+            saida = subprocess.run(["xrandr"], capture_output=True, text=True).stdout
+            atual = saida.split("current")[1].split(",")[0]
+            largura, altura = atual.split("x")
+            return int(largura), int(altura)
+    except Exception:
+        return 1280, 720
+
+
+def calcular_tamanho_exibicao(largura_frame, altura_frame):
+    largura_tela, altura_tela = obter_tamanho_tela()
+    escala = min((largura_tela - 20) / largura_frame, (altura_tela - 100) / altura_frame)
+    largura_janela = int(largura_frame * escala)
+    altura_janela = int(altura_frame * escala)
+    posicao = ((largura_tela - largura_janela) // 2, 25)
+    return (largura_janela, altura_janela), posicao
+
+
+def desenhar_alerta(frame, x1, x2, y2):
+    fonte = cv2.FONT_HERSHEY_SIMPLEX
+    (largura_texto, altura_texto), _ = cv2.getTextSize(TEXTO_ALERTA, fonte, ESCALA_ALERTA, ESPESSURA_ALERTA)
+    altura_frame, largura_frame = frame.shape[:2]
+
+    x = (x1 + x2) // 2 - largura_texto // 2
+    x = max(5, min(x, largura_frame - largura_texto - 5))
+    y = y2 + altura_texto + 40
+    y = min(y, altura_frame - 10)
+
+    cv2.putText(frame, TEXTO_ALERTA, (x, y), fonte, ESCALA_ALERTA, COR_TEXTO, ESPESSURA_ALERTA)
+
+    (largura_antes, _), _ = cv2.getTextSize("SONOL", fonte, ESCALA_ALERTA, ESPESSURA_ALERTA)
+    (largura_e, _), _ = cv2.getTextSize("E", fonte, ESCALA_ALERTA, ESPESSURA_ALERTA)
+    base_acento = y - altura_texto - 6
+    topo_acento = base_acento - int(altura_texto * 0.35)
+    esquerda = x + largura_antes + int(largura_e * 0.2)
+    meio = x + largura_antes + largura_e // 2
+    direita = x + largura_antes + int(largura_e * 0.8)
+    cv2.line(frame, (esquerda, base_acento), (meio, topo_acento), COR_TEXTO, ESPESSURA_ALERTA - 1)
+    cv2.line(frame, (meio, topo_acento), (direita, base_acento), COR_TEXTO, ESPESSURA_ALERTA - 1)
+
+
 def detectar_rostos(gray, detector):
     global ultima_regiao_rosto, frames_desde_deteccao_completa
 
@@ -176,6 +243,9 @@ camera = abrir_camera(CAMERA_INDEX)
 if camera is None:
     print("erro nenhuma camera encontrada.")
     sys.exit(1)
+
+cv2.namedWindow(NOME_JANELA, cv2.WINDOW_AUTOSIZE)
+tamanho_exibicao = None
 
 while True:
     ret, frame = camera.read()
@@ -289,8 +359,7 @@ while True:
                 st["alarme_on"] = False
 
         if tecnicas_em_alerta:
-            cv2.putText(frame, "SONOLENCIA! ({})".format(", ".join(tecnicas_em_alerta)), (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, COR_TEXTO, 2)
+            desenhar_alerta(frame, x1, x2, y2)
 
         cv2.putText(frame, "EAR: {:.2f}".format(ear), (300, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, COR_TEXTO, 2)
@@ -300,7 +369,12 @@ while True:
     if tocar_som:
         Thread(target=tocar_alarme, daemon=True).start()
 
-    cv2.imshow("Detector de Sonolencia", frame)
+    if tamanho_exibicao is None:
+        tamanho_exibicao, posicao_janela = calcular_tamanho_exibicao(frame.shape[1], frame.shape[0])
+        cv2.imshow(NOME_JANELA, cv2.resize(frame, tamanho_exibicao))
+        cv2.moveWindow(NOME_JANELA, *posicao_janela)
+
+    cv2.imshow(NOME_JANELA, cv2.resize(frame, tamanho_exibicao))
 
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
