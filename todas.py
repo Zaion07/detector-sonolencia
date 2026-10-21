@@ -23,12 +23,11 @@ MAX_CAMERAS_PROCURA = 5
 
 TECNICAS = ["ear", "mar"]
 
-TEMPO_PARA_ALERTA = 0.7
 FRAMES_CALIBRACAO = 30
 JANELA_SUAVIZACAO = 5
 
 
-RATIO_EAR = 0.80
+RATIO_EAR = 0.70
 RATIO_MAR = 2.4
 
 INTERVALO_REDETECCAO_COMPLETA = 20
@@ -50,8 +49,8 @@ POSICOES_TIMER = {
 }
 
 CONFIG_TECNICAS = {
-    "ear": {"limiar": None},
-    "mar": {"limiar": None},
+    "ear": {"limiar": None, "tempo": 1.0},
+    "mar": {"limiar": None, "tempo": 3.0},
 }
 
 estado = {
@@ -244,7 +243,7 @@ if camera is None:
     print("erro nenhuma camera encontrada.")
     sys.exit(1)
 
-cv2.namedWindow(NOME_JANELA, cv2.WINDOW_AUTOSIZE)
+cv2.namedWindow(NOME_JANELA, cv2.WINDOW_NORMAL)
 tamanho_exibicao = None
 
 while True:
@@ -346,10 +345,10 @@ while True:
                 tempo_decorrido = time.time() - st["tempo_evento"]
 
                 cv2.putText(frame, "{}: {:.1f}/{:.1f}s".format(
-                    tecnica.upper(), tempo_decorrido, TEMPO_PARA_ALERTA),
+                    tecnica.upper(), tempo_decorrido, CONFIG_TECNICAS[tecnica]["tempo"]),
                     POSICOES_TIMER[tecnica], cv2.FONT_HERSHEY_SIMPLEX, 0.55, COR_TEXTO, 2)
 
-                if tempo_decorrido >= TEMPO_PARA_ALERTA:
+                if tempo_decorrido >= CONFIG_TECNICAS[tecnica]["tempo"]:
                     if not st["alarme_on"]:
                         st["alarme_on"] = True
                         tocar_som = True
