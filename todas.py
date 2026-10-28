@@ -27,7 +27,7 @@ FRAMES_CALIBRACAO = 30
 JANELA_SUAVIZACAO = 5
 
 
-RATIO_EAR = 0.70
+RATIO_EAR = 0.80
 RATIO_MAR = 2.4
 
 INTERVALO_REDETECCAO_COMPLETA = 20
@@ -50,7 +50,7 @@ POSICOES_TIMER = {
 
 CONFIG_TECNICAS = {
     "ear": {"limiar": None, "tempo": 1.0},
-    "mar": {"limiar": None, "tempo": 3.0},
+    "mar": {"limiar": None, "tempo": 1.2},
 }
 
 estado = {
@@ -244,6 +244,11 @@ if camera is None:
     sys.exit(1)
 
 cv2.namedWindow(NOME_JANELA, cv2.WINDOW_NORMAL)
+cv2.setWindowProperty(
+    NOME_JANELA,
+    cv2.WND_PROP_FULLSCREEN,
+    cv2.WINDOW_FULLSCREEN
+)
 tamanho_exibicao = None
 
 while True:
