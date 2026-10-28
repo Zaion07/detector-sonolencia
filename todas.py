@@ -244,11 +244,7 @@ if camera is None:
     sys.exit(1)
 
 cv2.namedWindow(NOME_JANELA, cv2.WINDOW_NORMAL)
-cv2.setWindowProperty(
-    NOME_JANELA,
-    cv2.WND_PROP_FULLSCREEN,
-    cv2.WINDOW_FULLSCREEN
-)
+
 tamanho_exibicao = None
 
 while True:
